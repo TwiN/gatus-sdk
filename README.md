@@ -1,6 +1,14 @@
-# Gatus SDK for Go
+# gatus-sdk
+
+[![test](https://github.com/TwiN/gatus-sdk/workflows/test/badge.svg)](https://github.com/TwiN/gatus-sdk/actions?query=workflow%3Atest)
+[![Go Report Card](https://goreportcard.com/badge/github.com/TwiN/gatus-sdk)](https://goreportcard.com/report/github.com/TwiN/gatus-sdk)
+[![Go version](https://img.shields.io/github/go-mod/go-version/TwiN/gatus-sdk.svg)](https://github.com/TwiN/gatus-sdk)
+[![License](https://img.shields.io/github/license/TwiN/gatus-sdk.svg)](LICENSE)
 
 A lightweight, zero-dependency Go SDK for interacting with Gatus status page APIs.
+
+Lost? The CLI can be found at [gatus-cli](https://github.com/TwiN/gatus-cli), while the main Gatus project is at [gatus](https://github.com/TwiN/gatus).
+
 
 ## Installation
 
@@ -34,13 +42,11 @@ func main() {
     }
     
     for _, status := range statuses {
-        fmt.Printf("Endpoint: %s (Group: %s) - Key: %s\n", 
-            status.Name, status.Group, status.Key)
+        fmt.Printf("Endpoint: %s (Group: %s) - Key: %s\n", status.Name, status.Group, status.Key)
         
         if len(status.Results) > 0 {
             lastResult := status.Results[0]
-            fmt.Printf("  Status: %d, Success: %v\n", 
-                lastResult.Status, lastResult.Success)
+            fmt.Printf("  Status: %d, Success: %v\n", lastResult.Status, lastResult.Success)
         }
     }
 }
@@ -306,8 +312,7 @@ func main() {
             healthBadge := client.GetEndpointHealthBadgeURL(ep.Key)
             uptimeBadge := client.GetEndpointUptimeBadgeURL(ep.Key, "24h")
             
-            report.WriteString(fmt.Sprintf("| %s | ![Health](%s) | ![Uptime](%s) | %s |\n",
-                ep.Name, healthBadge, uptimeBadge, health))
+            report.WriteString(fmt.Sprintf("| %s | ![Health](%s) | ![Uptime](%s) | %s |\n", ep.Name, healthBadge, uptimeBadge, health))
         }
         
         report.WriteString("\n")
