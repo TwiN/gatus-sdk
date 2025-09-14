@@ -115,6 +115,29 @@ func (c *Client) doRequest(ctx context.Context, method, path string) (*http.Resp
 	return resp, nil
 }
 
+// doRequestWithAuth performs an HTTP request with the configured client settings and Bearer authentication.
+func (c *Client) doRequestWithAuth(ctx context.Context, method, path string, token string) (*http.Response, error) {
+	url := c.baseURL + path
+
+	req, err := http.NewRequestWithContext(ctx, method, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("creating request: %w", err)
+	}
+
+	// Set headers
+	req.Header.Set("User-Agent", c.userAgent)
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Accept-Encoding", "gzip")
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("executing request: %w", err)
+	}
+
+	return resp, nil
+}
+
 // decodeResponse decodes the HTTP response body, handling gzip compression if present.
 func (c *Client) decodeResponse(resp *http.Response, v interface{}) error {
 	defer resp.Body.Close()

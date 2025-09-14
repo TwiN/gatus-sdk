@@ -153,7 +153,6 @@ respTimes, err := client.GetEndpointResponseTimes(ctx, "core_blog-home", "24h")
 if err != nil {
     log.Fatal(err)
 }
-
 // Convert nanoseconds to milliseconds for display
 fmt.Printf("Response Times:\n")
 fmt.Printf("  Average: %dms\n", respTimes.Average/1000000)
@@ -167,19 +166,31 @@ Generate badge URLs for embedding in documentation or dashboards:
 
 ```go
 key := "core_blog-home"
-
 // Get uptime badge URL
 uptimeBadgeURL := client.GetEndpointUptimeBadgeURL(key, "24h")
 fmt.Printf("![Uptime](%s)\n", uptimeBadgeURL)
-
 // Get health badge URL
 healthBadgeURL := client.GetEndpointHealthBadgeURL(key)
 fmt.Printf("![Health](%s)\n", healthBadgeURL)
-
 // Get response time badge URL
 respTimeBadgeURL := client.GetEndpointResponseTimeBadgeURL(key, "24h")
 fmt.Printf("![Response Time](%s)\n", respTimeBadgeURL)
 ```
+
+### Push External Endpoint Results
+
+Push monitoring results from external systems to Gatus:
+
+```go
+// Generate key from group and name
+key := gatus.GenerateEndpointKey("core", "ext-ep-test")
+// Push successful result
+err := client.PushExternalEndpointResult(ctx, key, "token", true, "", "10s")
+// Push failed result
+err = client.PushExternalEndpointResult(ctx, key, "token", false, "Connection timeout", "30s")
+```
+
+Requires external endpoints configured in Gatus. See [docs](https://gatus.io/docs/monitoring-push-based).
 
 ## Complete Examples
 
@@ -422,46 +433,3 @@ go test -run TestGenerateEndpointKey ./...
 # Verbose output
 go test -v ./...
 ```
-
-## Performance
-
-The SDK is designed for performance:
-
-- HTTP client connection pooling
-- Support for gzip compression
-- Efficient JSON parsing
-- Minimal memory allocations
-- Zero external dependencies
-
-Benchmark results:
-
-```bash
-go test -bench=. ./...
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Ensure tests pass with 100% coverage
-5. Push to the branch (`git push origin feature/amazing-feature`)
-6. Open a Pull Request
-
-### Development Guidelines
-
-- Maintain 100% test coverage
-- Use only Go standard library (no external dependencies)
-- Follow Go idioms and best practices
-- Document all exported functions
-- Add examples for new features
-- Run `go fmt` and `go vet` before committing
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Support
-
-For issues, questions, or contributions, please visit the [GitHub repository](https://github.com/TwiN/gatus-sdk).
-
