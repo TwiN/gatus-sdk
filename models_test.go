@@ -40,7 +40,7 @@ func TestEndpointStatus_JSON(t *testing.T) {
 				Name:  "blog-home",
 				Group: "core",
 				Key:   "core_blog-home",
-				Results: []Result{
+				Results: []EndpointResult{
 					{
 						Status:   200,
 						Hostname: "blog.example.com",
@@ -71,7 +71,7 @@ func TestEndpointStatus_JSON(t *testing.T) {
 				Name:    "api",
 				Group:   "",
 				Key:     "_api",
-				Results: []Result{},
+				Results: []EndpointResult{},
 			},
 			wantErr: false,
 		},
@@ -102,7 +102,7 @@ func TestEndpointStatus_JSON(t *testing.T) {
 				Name:  "failing-service",
 				Group: "test",
 				Key:   "test_failing-service",
-				Results: []Result{
+				Results: []EndpointResult{
 					{
 						Status:           0,
 						Hostname:         "",
@@ -157,7 +157,7 @@ func TestResult_JSON(t *testing.T) {
 	tests := []struct {
 		name     string
 		json     string
-		expected Result
+		expected EndpointResult
 		wantErr  bool
 	}{
 		{
@@ -180,7 +180,7 @@ func TestResult_JSON(t *testing.T) {
 				"timestamp": "2025-08-10T12:00:00Z",
 				"errors": ["warning: slow response"]
 			}`,
-			expected: Result{
+			expected: EndpointResult{
 				Status:   200,
 				Hostname: "api.example.com",
 				Duration: 987654321,
@@ -203,7 +203,7 @@ func TestResult_JSON(t *testing.T) {
 				"success": false,
 				"timestamp": "2025-08-10T00:00:00Z"
 			}`,
-			expected: Result{
+			expected: EndpointResult{
 				Status:           0,
 				Duration:         0,
 				ConditionResults: []ConditionResult{},
@@ -215,14 +215,14 @@ func TestResult_JSON(t *testing.T) {
 		{
 			name:     "invalid json",
 			json:     `not json`,
-			expected: Result{},
+			expected: EndpointResult{},
 			wantErr:  true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var got Result
+			var got EndpointResult
 			err := json.Unmarshal([]byte(tt.json), &got)
 
 			if (err != nil) != tt.wantErr {
@@ -471,28 +471,28 @@ func TestResponseTimeData_JSON(t *testing.T) {
 	}
 }
 
-// Helper function to compare Result structs
-func compareResults(t *testing.T, got, expected Result) {
+// Helper function to compare EndpointResult structs
+func compareResults(t *testing.T, got, expected EndpointResult) {
 	t.Helper()
 
 	if got.Status != expected.Status {
-		t.Errorf("Result.Status = %v, want %v", got.Status, expected.Status)
+		t.Errorf("EndpointResult.Status = %v, want %v", got.Status, expected.Status)
 	}
 	if got.Hostname != expected.Hostname {
-		t.Errorf("Result.Hostname = %v, want %v", got.Hostname, expected.Hostname)
+		t.Errorf("EndpointResult.Hostname = %v, want %v", got.Hostname, expected.Hostname)
 	}
 	if got.Duration != expected.Duration {
-		t.Errorf("Result.Duration = %v, want %v", got.Duration, expected.Duration)
+		t.Errorf("EndpointResult.Duration = %v, want %v", got.Duration, expected.Duration)
 	}
 	if got.Success != expected.Success {
-		t.Errorf("Result.Success = %v, want %v", got.Success, expected.Success)
+		t.Errorf("EndpointResult.Success = %v, want %v", got.Success, expected.Success)
 	}
 	if !got.Timestamp.Equal(expected.Timestamp) {
-		t.Errorf("Result.Timestamp = %v, want %v", got.Timestamp, expected.Timestamp)
+		t.Errorf("EndpointResult.Timestamp = %v, want %v", got.Timestamp, expected.Timestamp)
 	}
 
 	if len(got.ConditionResults) != len(expected.ConditionResults) {
-		t.Errorf("Result.ConditionResults length = %v, want %v", len(got.ConditionResults), len(expected.ConditionResults))
+		t.Errorf("EndpointResult.ConditionResults length = %v, want %v", len(got.ConditionResults), len(expected.ConditionResults))
 	} else {
 		for i := range got.ConditionResults {
 			if got.ConditionResults[i].Condition != expected.ConditionResults[i].Condition {
@@ -505,11 +505,11 @@ func compareResults(t *testing.T, got, expected Result) {
 	}
 
 	if len(got.Errors) != len(expected.Errors) {
-		t.Errorf("Result.Errors length = %v, want %v", len(got.Errors), len(expected.Errors))
+		t.Errorf("EndpointResult.Errors length = %v, want %v", len(got.Errors), len(expected.Errors))
 	} else {
 		for i := range got.Errors {
 			if got.Errors[i] != expected.Errors[i] {
-				t.Errorf("Result.Errors[%d] = %v, want %v", i, got.Errors[i], expected.Errors[i])
+				t.Errorf("EndpointResult.Errors[%d] = %v, want %v", i, got.Errors[i], expected.Errors[i])
 			}
 		}
 	}
