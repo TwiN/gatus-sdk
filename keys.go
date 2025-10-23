@@ -6,7 +6,7 @@ import (
 
 // GenerateEndpointKey generates a unique key for an endpoint based on its group and name.
 // The key format is {group}_{name} where special characters are replaced with '-'.
-// Characters replaced: '/', '_', ',', '.', '#' become '-'.
+// Characters replaced: '/', '_', ',', '.', '#', '+', '&' become '-'
 // If the group is empty, the key format is _{name}.
 //
 // Examples:
@@ -21,6 +21,8 @@ func GenerateEndpointKey(group, name string) string {
 		",", "-",
 		".", "-",
 		"#", "-",
+		"+", "-",
+		"&", "-",
 	)
 
 	sanitizedGroup := replacer.Replace(group)

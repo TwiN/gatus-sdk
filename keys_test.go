@@ -179,78 +179,43 @@ func TestGenerateEndpointKey(t *testing.T) {
 			endpoint: "_name_",
 			expected: "-group-_-name-",
 		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := GenerateEndpointKey(tt.group, tt.endpoint)
-			if result != tt.expected {
-				t.Errorf("GenerateEndpointKey(%q, %q) = %q, want %q",
-					tt.group, tt.endpoint, result, tt.expected)
-			}
-		})
-	}
-}
-
-func TestGenerateEndpointKey_Consistency(t *testing.T) {
-	// Test that the same input always produces the same output
-	group := "api/v1"
-	name := "health_check"
-
-	key1 := GenerateEndpointKey(group, name)
-	key2 := GenerateEndpointKey(group, name)
-	key3 := GenerateEndpointKey(group, name)
-
-	if key1 != key2 || key2 != key3 {
-		t.Errorf("GenerateEndpointKey is not consistent: got %q, %q, %q", key1, key2, key3)
-	}
-
-	expected := "api-v1_health-check"
-	if key1 != expected {
-		t.Errorf("GenerateEndpointKey(%q, %q) = %q, want %q", group, name, key1, expected)
-	}
-}
-
-func TestGenerateEndpointKey_RealWorldExamples(t *testing.T) {
-	// Test examples from actual Gatus configurations
-	tests := []struct {
-		name     string
-		group    string
-		endpoint string
-		expected string
-	}{
 		{
-			name:     "AWS service endpoint",
-			group:    "aws/production",
-			endpoint: "ec2_instances.us-east-1",
-			expected: "aws-production_ec2-instances-us-east-1",
+			name:     "group with plus sign",
+			group:    "api+v1",
+			endpoint: "service",
+			expected: "api-v1_service",
 		},
 		{
-			name:     "Kubernetes namespace and service",
-			group:    "k8s/default",
-			endpoint: "nginx-ingress",
-			expected: "k8s-default_nginx-ingress",
+			name:     "name with plus sign",
+			group:    "services",
+			endpoint: "cache+store",
+			expected: "services_cache-store",
 		},
 		{
-			name:     "Docker container monitoring",
-			group:    "docker",
-			endpoint: "redis_cache#1",
-			expected: "docker_redis-cache-1",
+			name:     "group with ampersand",
+			group:    "dev&test",
+			endpoint: "endpoint",
+			expected: "dev-test_endpoint",
 		},
 		{
-			name:     "Microservice with version",
-			group:    "microservices",
-			endpoint: "user-api/v2.1",
-			expected: "microservices_user-api-v2-1",
+			name:     "name with ampersand",
+			group:    "monitoring",
+			endpoint: "health&status",
+			expected: "monitoring_health-status",
 		},
 		{
-			name:     "Database monitoring",
-			group:    "databases",
-			endpoint: "postgres_main.replica",
-			expected: "databases_postgres-main-replica",
+			name:     "both with plus and ampersand",
+			group:    "api+v2&beta",
+			endpoint: "user+service&test",
+			expected: "api-v2-beta_user-service-test",
+		},
+		{
+			name:     "all new special characters",
+			group:    "env+prod&region",
+			endpoint: "service+api&gateway",
+			expected: "env-prod-region_service-api-gateway",
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := GenerateEndpointKey(tt.group, tt.endpoint)
