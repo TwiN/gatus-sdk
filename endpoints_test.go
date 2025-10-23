@@ -10,52 +10,6 @@ import (
 	"time"
 )
 
-func TestValidateDuration(t *testing.T) {
-	tests := []struct {
-		name     string
-		duration string
-		wantErr  bool
-	}{
-		{"valid 1h", "1h", false},
-		{"valid 24h", "24h", false},
-		{"valid 7d", "7d", false},
-		{"valid 30d", "30d", false},
-		{"invalid 2h", "2h", true},
-		{"invalid 48h", "48h", true},
-		{"invalid 1d", "1d", true},
-		{"invalid 60d", "60d", true},
-		{"empty string", "", true},
-		{"invalid format", "abc", true},
-		{"invalid number", "123", true},
-		{"case sensitive", "1H", true},
-		{"with spaces", " 1h ", true},
-		{"partial match", "1hr", true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateDuration(tt.duration)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ValidateDuration(%q) error = %v, wantErr %v", tt.duration, err, tt.wantErr)
-			}
-
-			if err != nil && !tt.wantErr {
-				t.Errorf("unexpected error: %v", err)
-			}
-
-			if err != nil && tt.wantErr {
-				valErr, ok := err.(*ValidationError)
-				if !ok {
-					t.Error("expected ValidationError type")
-				}
-				if valErr.Field != "duration" {
-					t.Errorf("Field = %v, want 'duration'", valErr.Field)
-				}
-			}
-		})
-	}
-}
-
 func TestClient_GetAllEndpointStatuses(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -81,7 +35,7 @@ func TestClient_GetAllEndpointStatuses(t *testing.T) {
 						Name:  "blog-home",
 						Group: "core",
 						Key:   "core_blog-home",
-						Results: []Result{
+						Results: []EndpointResult{
 							{
 								Status:    200,
 								Success:   true,
@@ -93,7 +47,7 @@ func TestClient_GetAllEndpointStatuses(t *testing.T) {
 						Name:  "api",
 						Group: "services",
 						Key:   "services_api",
-						Results: []Result{
+						Results: []EndpointResult{
 							{
 								Status:    200,
 								Success:   true,
@@ -199,7 +153,7 @@ func TestClient_GetEndpointStatusByKey(t *testing.T) {
 					Name:  "blog-home",
 					Group: "core",
 					Key:   "core_blog-home",
-					Results: []Result{
+					Results: []EndpointResult{
 						{
 							Status:  200,
 							Success: true,
@@ -619,22 +573,6 @@ func TestClient_GetEndpointResponseTimes(t *testing.T) {
 			},
 		},
 		{
-			name:           "invalid duration",
-			key:            "core_api",
-			duration:       "48h",
-			serverResponse: func(w http.ResponseWriter, r *http.Request) {},
-			expectedError:  true,
-			checkError: func(t *testing.T, err error) {
-				valErr, ok := err.(*ValidationError)
-				if !ok {
-					t.Error("expected ValidationError type")
-				}
-				if valErr.Field != "duration" {
-					t.Errorf("Field = %v, want 'duration'", valErr.Field)
-				}
-			},
-		},
-		{
 			name:     "server error",
 			key:      "core_api",
 			duration: "24h",
@@ -747,13 +685,6 @@ func TestClient_GetEndpointUptimeData(t *testing.T) {
 			expectedError:  true,
 		},
 		{
-			name:           "invalid duration",
-			key:            "core_api",
-			duration:       "invalid",
-			serverResponse: func(w http.ResponseWriter, r *http.Request) {},
-			expectedError:  true,
-		},
-		{
 			name:     "404 not found",
 			key:      "nonexistent",
 			duration: "24h",
@@ -825,24 +756,6 @@ func TestClient_ContextCancellation(t *testing.T) {
 			t.Error("expected deadline exceeded error")
 		}
 	})
-}
-
-func TestValidDurations(t *testing.T) {
-	// Ensure ValidDurations slice contains expected values
-	expectedDurations := []string{"1h", "24h", "7d", "30d"}
-
-	if len(ValidDurations) != len(expectedDurations) {
-		t.Errorf("ValidDurations length = %v, want %v", len(ValidDurations), len(expectedDurations))
-	}
-
-	for i, expected := range expectedDurations {
-		if i >= len(ValidDurations) {
-			break
-		}
-		if ValidDurations[i] != expected {
-			t.Errorf("ValidDurations[%d] = %v, want %v", i, ValidDurations[i], expected)
-		}
-	}
 }
 
 func TestClient_EdgeCases(t *testing.T) {

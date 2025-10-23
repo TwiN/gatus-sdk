@@ -9,28 +9,6 @@ import (
 	"net/url"
 )
 
-// ValidDurations contains the valid duration values for Gatus API endpoints.
-var ValidDurations = []string{"1h", "24h", "7d", "30d"}
-
-// ValidateDuration validates that a duration string is one of the accepted values.
-// Valid durations are: 1h, 24h, 7d, 30d.
-//
-// Example:
-//
-//	err := ValidateDuration("24h") // returns nil
-//	err := ValidateDuration("48h") // returns validation error
-func ValidateDuration(duration string) error {
-	for _, valid := range ValidDurations {
-		if duration == valid {
-			return nil
-		}
-	}
-	return &ValidationError{
-		Field:   "duration",
-		Message: fmt.Sprintf("must be one of: %v", ValidDurations),
-	}
-}
-
 // GetAllEndpointStatuses retrieves the status of all configured endpoints.
 //
 // Example:
@@ -84,7 +62,7 @@ func (c *Client) GetEndpointStatusByKey(ctx context.Context, key string) (*Endpo
 }
 
 // GetEndpointStatus retrieves the status of a specific endpoint by its group and name.
-// The key is generated internally using GenerateEndpointKey.
+// The key is generated internally using GenerateKey.
 //
 // Example:
 //
@@ -100,7 +78,7 @@ func (c *Client) GetEndpointStatus(ctx context.Context, group, name string) (*En
 			Message: "cannot be empty",
 		}
 	}
-	key := GenerateEndpointKey(group, name)
+	key := GenerateKey(group, name)
 	return c.GetEndpointStatusByKey(ctx, key)
 }
 
@@ -175,9 +153,6 @@ func (c *Client) GetEndpointResponseTimes(ctx context.Context, key string, durat
 			Message: "cannot be empty",
 		}
 	}
-	if err := ValidateDuration(duration); err != nil {
-		return nil, err
-	}
 	path := fmt.Sprintf("/api/v1/endpoints/%s/response-times/%s", url.PathEscape(key), url.PathEscape(duration))
 	resp, err := c.doRequest(ctx, http.MethodGet, path)
 	if err != nil {
@@ -206,9 +181,6 @@ func (c *Client) GetEndpointUptimeData(ctx context.Context, key string, duration
 			Field:   "key",
 			Message: "cannot be empty",
 		}
-	}
-	if err := ValidateDuration(duration); err != nil {
-		return nil, err
 	}
 	path := fmt.Sprintf("/api/v1/endpoints/%s/uptimes/%s", url.PathEscape(key), url.PathEscape(duration))
 	resp, err := c.doRequest(ctx, http.MethodGet, path)
@@ -248,7 +220,7 @@ func (c *Client) GetEndpointUptimeData(ctx context.Context, key string, duration
 // The endpoint must be configured as an external endpoint in Gatus with a matching token.
 //
 // Parameters:
-//   - key: The endpoint key in the format {group}_{name} (use GenerateEndpointKey to create it)
+//   - key: The endpoint key in the format {group}_{name} (use GenerateKey to create it)
 //   - token: The bearer token configured for the external endpoint
 //   - success: Whether the health check was successful
 //   - errorMessage: Optional error message if the check failed (can be empty for successful checks)

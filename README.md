@@ -82,15 +82,15 @@ The SDK provides a utility function to generate endpoint keys in the format expe
 
 ```go
 // Generate a key for an endpoint
-key := gatus.GenerateEndpointKey("core", "blog-home")
+key := gatus.GenerateKey("core", "blog-home")
 fmt.Println(key) // Output: core_blog-home
 
 // Special characters are replaced with hyphens
-key = gatus.GenerateEndpointKey("api/v1", "health_check.test")
+key = gatus.GenerateKey("api/v1", "health_check.test")
 fmt.Println(key) // Output: api-v1_health-check-test
 
 // Empty group is handled
-key = gatus.GenerateEndpointKey("", "standalone")
+key = gatus.GenerateKey("", "standalone")
 fmt.Println(key) // Output: _standalone
 ```
 
@@ -126,29 +126,27 @@ if len(status.Results) > 0 && status.Results[0].Success {
 ### Uptime Information
 
 ```go
-// Get uptime percentage
+// Get uptime percentage (valid durations: 1h, 24h, 7d, 30d)
 uptime, err := client.GetEndpointUptime(ctx, "core_blog-home", "24h")
 if err != nil {
     log.Fatal(err)
 }
 fmt.Printf("Uptime: %.2f%%\n", uptime)
 
-// Get detailed uptime data
+// Get detailed uptime data (valid durations: 1h, 24h, 7d, 30d)
 uptimeData, err := client.GetEndpointUptimeData(ctx, "core_blog-home", "7d")
 if err != nil {
     log.Fatal(err)
 }
 fmt.Printf("Uptime: %.2f%% over %s\n", uptimeData.Uptime, uptimeData.Duration)
 
-// Valid durations: 1h, 24h, 7d, 30d
-err = gatus.ValidateDuration("24h") // Returns nil
-err = gatus.ValidateDuration("48h") // Returns validation error
+
 ```
 
 ### Response Time Metrics
 
 ```go
-// Get response time statistics
+// Get response time statistics (valid durations: 1h, 24h, 7d, 30d)
 respTimes, err := client.GetEndpointResponseTimes(ctx, "core_blog-home", "24h")
 if err != nil {
     log.Fatal(err)
@@ -166,13 +164,13 @@ Generate badge URLs for embedding in documentation or dashboards:
 
 ```go
 key := "core_blog-home"
-// Get uptime badge URL
+// Get uptime badge URL (valid durations: 1h, 24h, 7d, 30d)
 uptimeBadgeURL := client.GetEndpointUptimeBadgeURL(key, "24h")
 fmt.Printf("![Uptime](%s)\n", uptimeBadgeURL)
 // Get health badge URL
 healthBadgeURL := client.GetEndpointHealthBadgeURL(key)
 fmt.Printf("![Health](%s)\n", healthBadgeURL)
-// Get response time badge URL
+// Get response time badge URL (valid durations: 1h, 24h, 7d, 30d)
 respTimeBadgeURL := client.GetEndpointResponseTimeBadgeURL(key, "24h")
 fmt.Printf("![Response Time](%s)\n", respTimeBadgeURL)
 ```
@@ -183,7 +181,7 @@ Push monitoring results from external systems to Gatus:
 
 ```go
 // Generate key from group and name
-key := gatus.GenerateEndpointKey("core", "ext-ep-test")
+key := gatus.GenerateKey("core", "ext-ep-test")
 // Push successful result
 err := client.PushExternalEndpointResult(ctx, key, "token", true, "", "10s")
 // Push failed result
@@ -191,6 +189,55 @@ err = client.PushExternalEndpointResult(ctx, key, "token", false, "Connection ti
 ```
 
 Requires external endpoints configured in Gatus. See [docs](https://gatus.io/docs/monitoring-push-based).
+
+### Suite Status
+
+Retrieve status information for Gatus suites (sequential endpoint checks):
+
+```go
+ctx := context.Background()
+
+// Get all suite statuses
+suites, err := client.GetAllSuiteStatuses(ctx)
+if err != nil {
+    log.Fatal(err)
+}
+
+for _, suite := range suites {
+    fmt.Printf("Suite: %s (Key: %s)\n", suite.Name, suite.Key)
+}
+
+// Get status by key
+suiteStatus, err := client.GetSuiteStatusByKey(ctx, "_check-authentication")
+if err != nil {
+    log.Fatal(err)
+}
+
+// Get status by group and name (key is generated automatically)
+suiteStatus, err := client.GetSuiteStatus(ctx, "", "check-authentication")
+if err != nil {
+    log.Fatal(err)
+}
+
+// Iterate through suite execution results
+for _, result := range suiteStatus.Results {
+    fmt.Printf("Suite execution at %s:\n", result.Timestamp.Format(time.RFC3339))
+    fmt.Printf("  Success: %v\n", result.Success)
+    fmt.Printf("  Duration: %dms\n", result.Duration/1000000)
+
+    // Check each endpoint result in the suite
+    for _, endpointResult := range result.EndpointResults {
+        fmt.Printf("  - Endpoint: %s\n", endpointResult.Name)
+        fmt.Printf("    Success: %v, Duration: %dms\n",
+            endpointResult.Success, endpointResult.Duration/1000000)
+
+        // Check condition results
+        for _, condition := range endpointResult.ConditionResults {
+            fmt.Printf("    ✓ %s: %v\n", condition.Condition, condition.Success)
+        }
+    }
+}
+```
 
 ## Complete Examples
 
@@ -221,7 +268,7 @@ func main() {
         {"databases", "postgres"},
     }
     for _, ep := range endpoints {
-        key := gatus.GenerateEndpointKey(ep.Group, ep.Name)
+        key := gatus.GenerateKey(ep.Group, ep.Name)
         // Get status
         status, err := client.GetEndpointStatusByKey(ctx, key)
         if err != nil {
@@ -428,7 +475,7 @@ go tool cover -html=coverage.out
 go test -race ./...
 
 # Run specific tests
-go test -run TestGenerateEndpointKey ./...
+go test -run TestGenerateKey ./...
 
 # Verbose output
 go test -v ./...
