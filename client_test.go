@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -434,6 +435,14 @@ func TestClientOptions(t *testing.T) {
 		}
 	})
 
+	t.Run("WithBasicAuth", func(t *testing.T) {
+		client := NewClient("https://example.com", WithBasicAuth("user", "pass"))
+
+		if client.basicAuth == nil || client.basicAuth.username != "user" || client.basicAuth.password != "pass" {
+			t.Errorf("basicAuth = %+v, want username %q and password %q", client.basicAuth, "user", "pass")
+		}
+	})
+
 	t.Run("multiple options applied in order", func(t *testing.T) {
 		client := NewClient("https://example.com",
 			WithTimeout(10*time.Second),
@@ -447,6 +456,96 @@ func TestClientOptions(t *testing.T) {
 		}
 		if client.userAgent != "Agent2" {
 			t.Errorf("userAgent = %v, want %v", client.userAgent, "Agent2")
+		}
+	})
+}
+
+func TestClient_BasicAuth(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		username, password, ok := r.BasicAuth()
+		if !ok || username != "user" || password != "pass" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		w.Write([]byte(`[]`))
+	}))
+	defer server.Close()
+
+	t.Run("sends credentials", func(t *testing.T) {
+		client := NewClient(server.URL, WithBasicAuth("user", "pass"))
+		if _, err := client.GetAllEndpointStatuses(context.Background()); err != nil {
+			t.Fatalf("expected request with basic auth to succeed, got %v", err)
+		}
+	})
+
+	t.Run("sends credentials with custom HTTP client", func(t *testing.T) {
+		client := NewClient(server.URL,
+			WithHTTPClient(&http.Client{Timeout: 5 * time.Second}),
+			WithBasicAuth("user", "pass"),
+		)
+		if _, err := client.GetAllEndpointStatuses(context.Background()); err != nil {
+			t.Fatalf("expected request with basic auth to succeed, got %v", err)
+		}
+	})
+
+	t.Run("combined with custom user agent", func(t *testing.T) {
+		uaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if username, password, ok := r.BasicAuth(); !ok || username != "user" || password != "pass" {
+				t.Errorf("basic auth = (%q, %q, %v), want (%q, %q, true)", username, password, ok, "user", "pass")
+			}
+			if got := r.Header.Get("User-Agent"); got != "MyApp/1.0" {
+				t.Errorf("User-Agent = %q, want %q", got, "MyApp/1.0")
+			}
+			w.Write([]byte(`[]`))
+		}))
+		defer uaServer.Close()
+
+		client := NewClient(uaServer.URL, WithBasicAuth("user", "pass"), WithUserAgent("MyApp/1.0"))
+		if _, err := client.GetAllEndpointStatuses(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("no credentials by default", func(t *testing.T) {
+		client := NewClient(server.URL)
+		_, err := client.GetAllEndpointStatuses(context.Background())
+		var apiErr *APIError
+		if !errors.As(err, &apiErr) || apiErr.StatusCode != http.StatusUnauthorized {
+			t.Fatalf("expected 401 APIError, got %v", err)
+		}
+	})
+
+	t.Run("bearer token not overridden on external push", func(t *testing.T) {
+		pushServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if got := r.Header.Get("Authorization"); got != "Bearer token" {
+				t.Errorf("Authorization = %q, want %q", got, "Bearer token")
+			}
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer pushServer.Close()
+
+		client := NewClient(pushServer.URL, WithBasicAuth("user", "pass"))
+		if err := client.PushExternalEndpointResult(context.Background(), "core_ext", "token", true, "", ""); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("credentials not sent to redirected host", func(t *testing.T) {
+		other := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if _, _, ok := r.BasicAuth(); ok {
+				t.Error("credentials were sent to a redirected host")
+			}
+			w.Write([]byte(`[]`))
+		}))
+		defer other.Close()
+		// Go only forwards credentials when the redirect keeps the same hostname, so redirect from 127.0.0.1 to localhost
+		otherURL := strings.Replace(other.URL, "127.0.0.1", "localhost", 1)
+		redirecting := httptest.NewServer(http.RedirectHandler(otherURL+"/api/v1/endpoints/statuses", http.StatusFound))
+		defer redirecting.Close()
+
+		client := NewClient(redirecting.URL, WithBasicAuth("user", "pass"))
+		if _, err := client.GetAllEndpointStatuses(context.Background()); err != nil {
+			t.Fatal(err)
 		}
 	})
 }

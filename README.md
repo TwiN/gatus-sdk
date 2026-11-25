@@ -66,6 +66,9 @@ client := gatus.NewClient("https://status.example.com", gatus.WithTimeout(10 * t
 // Create client with custom user agent
 client := gatus.NewClient("https://status.example.com", gatus.WithUserAgent("MyApp/1.0"))
 
+// Create client with Basic Auth, for Gatus instances configured with security.basic
+client := gatus.NewClient("https://status.example.com", gatus.WithBasicAuth("username", "password"))
+
 // Create client with custom HTTP client
 httpClient := &http.Client{
     Timeout: 15 * time.Second,

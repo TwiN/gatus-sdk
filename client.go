@@ -23,6 +23,13 @@ type Client struct {
 	baseURL    string
 	httpClient *http.Client
 	userAgent  string
+	basicAuth  *basicAuthCredentials
+}
+
+// basicAuthCredentials holds the credentials used for HTTP Basic Authentication.
+type basicAuthCredentials struct {
+	username string
+	password string
 }
 
 // ClientOption is a function that configures a Client.
@@ -93,6 +100,20 @@ func WithUserAgent(userAgent string) ClientOption {
 	}
 }
 
+// WithBasicAuth sets the credentials used for HTTP Basic Authentication, for Gatus instances configured with security.basic.
+//
+// The credentials are sent on every request except PushExternalEndpointResult, which authenticates with its own bearer token.
+// Go's HTTP client does not forward them if the server redirects to a different hostname (or one that isn't a subdomain of it).
+//
+// Example:
+//
+//	client := NewClient("https://status.example.org", WithBasicAuth("username", "password"))
+func WithBasicAuth(username, password string) ClientOption {
+	return func(c *Client) {
+		c.basicAuth = &basicAuthCredentials{username: username, password: password}
+	}
+}
+
 // doRequest performs an HTTP request with the configured client settings.
 func (c *Client) doRequest(ctx context.Context, method, path string) (*http.Response, error) {
 	url := c.baseURL + path
@@ -106,6 +127,9 @@ func (c *Client) doRequest(ctx context.Context, method, path string) (*http.Resp
 	req.Header.Set("User-Agent", c.userAgent)
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Accept-Encoding", "gzip")
+	if c.basicAuth != nil {
+		req.SetBasicAuth(c.basicAuth.username, c.basicAuth.password)
+	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
