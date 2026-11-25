@@ -488,6 +488,24 @@ func TestClient_BasicAuth(t *testing.T) {
 		}
 	})
 
+	t.Run("combined with custom user agent", func(t *testing.T) {
+		uaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if username, password, ok := r.BasicAuth(); !ok || username != "user" || password != "pass" {
+				t.Errorf("basic auth = (%q, %q, %v), want (%q, %q, true)", username, password, ok, "user", "pass")
+			}
+			if got := r.Header.Get("User-Agent"); got != "MyApp/1.0" {
+				t.Errorf("User-Agent = %q, want %q", got, "MyApp/1.0")
+			}
+			w.Write([]byte(`[]`))
+		}))
+		defer uaServer.Close()
+
+		client := NewClient(uaServer.URL, WithBasicAuth("user", "pass"), WithUserAgent("MyApp/1.0"))
+		if _, err := client.GetAllEndpointStatuses(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+	})
+
 	t.Run("no credentials by default", func(t *testing.T) {
 		client := NewClient(server.URL)
 		_, err := client.GetAllEndpointStatuses(context.Background())
